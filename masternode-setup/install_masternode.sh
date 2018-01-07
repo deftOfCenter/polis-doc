@@ -1,5 +1,8 @@
 #/bin/bash
 
+version="1.2.0"
+user=`whoami`
+
 clear
 cd ~
 echo "**********************************************************************"
@@ -58,11 +61,6 @@ if [[ ("$add_swap" == "y" || "$add_swap" == "Y" || "$add_swap" == "") ]]; then
     fi
 fi
 
-
-# Add masternode group and user
-sudo groupadd masternode
-sudo useradd -m -g masternode masternode
-
 # Update system 
 echo && echo "Upgrading system..."
 sleep 3
@@ -82,6 +80,7 @@ sleep 3
 sudo apt-get -y install \
     wget \
     git \
+    unzip \
     libevent-dev \
     libboost-dev \
     libboost-chrono-dev \
@@ -92,7 +91,17 @@ sudo apt-get -y install \
     libboost-thread-dev \
     libdb4.8-dev \
     libdb4.8++-dev \
-    libminiupnpc-dev 
+    libminiupnpc-dev \
+    build-essential \
+    libtool \
+    autotools-dev \
+    automake \
+    pkg-config \
+    libssl-dev \
+    libevent-dev \
+    bsdmainutils \
+    libzmq3-dev \
+    nano
 
 # Install fail2ban if needed
 if [[ ("$install_fail2ban" == "y" || "$install_fail2ban" == "Y" || "$install_fail2ban" == "") ]]; then
@@ -120,22 +129,22 @@ fi
 # Download polis
 echo && echo "Downloading ..."
 sleep 3
-wget https://github.com/polispay/polis/releases/download/v1.1.0/poliscore-1.1.0-linux.zip
-unzip poliscore-1.1.0-linux.zip
-rm poliscore-1.1.0-linux.zip
+wget https://github.com/polispay/polis/releases/download/v$version/poliscore-$version-linux.zip
+unzip poliscore-$version-linux.zip
+rm poliscore-$version-linux.zip
 
 # Install polis
-echo && echo "Installing poliscore-1.0.0..."
+echo && echo "Installing poliscore-$version..."
 sleep 3
-sudo mv ~/poliscore-1.1.0/usr/local/bin/polis{d,-cli} /usr/local/bin
+sudo mv /home/$user/poliscore-$version-linux/usr/local/bin/polis{d,-cli} /usr/local/bin
 
 # Create config for poliscore
-echo && echo "Configuring poliscore-1.1.0..."
+echo && echo "Configuring poliscore-$version..."
 sleep 3
 rpcuser=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 rpcpassword=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
-sudo mkdir -p /home/masternode/.poliscore
-sudo touch /home/masternode/.poliscore/polis.conf
+sudo mkdir -p /home/$user/.poliscore
+sudo touch /home/$user/.poliscore/polis.conf
 echo '
 rpcuser='$rpcuser'
 rpcpassword='$rpcpassword'
@@ -148,8 +157,18 @@ maxconnections=256
 externalip='$ip'
 masternodeprivkey='$key'
 masternode=1
-' | sudo -E tee /home/masternode/.poliscore/polis.conf
-sudo chown -R masternode:masternode /home/masternode/.poliscore
+connect=35.227.49.86:24126
+connect=192.243.103.182:24126
+connect=185.153.231.146:24126
+connect=91.223.147.100:24126
+connect=96.43.143.93:24126
+connect=104.236.147.210:24126
+connect=159.89.137.114:24126
+connect=159.89.139.41:24126
+connect=174.138.70.155:24126
+connect=174.138.70.16:24126
+connect=45.55.247.25:24126
+' | sudo -E tee /home/$user/.poliscore/polis.conf
 
 # Setup systemd service
 echo && echo "Starting polis deamon..."
@@ -160,11 +179,12 @@ Description=polisd
 After=network.target
 [Service]
 Type=simple
-User=masternode
-WorkingDirectory=/home/masternode
-ExecStart=/usr/local/bin/polisd -conf=/home/masternode/.poliscore/polis.conf -datadir=/home/masternode/.poliscore
-ExecStop=/usr/local/bin/polis-cli -conf=/home/masternode/.poliscore/polis.conf -datadir=/home/masternode/.poliscore stop
+User=$user
+WorkingDirectory=/home/$user
+ExecStart=/usr/local/bin/polisd -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore
+ExecStop=/usr/local/bin/polis-cli -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore stop
 Restart=on-abort
+
 
 [Install]
 WantedBy=multi-user.target
@@ -176,25 +196,23 @@ sudo systemctl start polisd
 echo && echo "Installing Sentinel..."
 sleep 3
 sudo apt-get -y install virtualenv python-pip
-sudo git clone https://github.com/polispay/sentinel /home/masternode/sentinel
-cd /home/masternode/sentinel
+sudo git clone https://github.com/polispay/sentinel /home/$user/sentinel
+cd /home/$user/sentinel
 virtualenv venv
 . venv/bin/activate
 pip install -r requirements.txt
 export EDITOR=nano
-(crontab -l -u masternode 2>/dev/null; echo '* * * * * cd /home/masternode/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1') | sudo crontab -u masternode -
-sudo chown -R masternode:masternode /home/masternode/sentinel
+(crontab -l -u $user 2>/dev/null; echo '* * * * * cd /home/$user/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1') | sudo crontab -u $user -
+
 cd ~
 
 # Add alias to run polis-cli
 echo && echo "Masternode setup complete!"
+
 touch ~/.bash_aliases
-echo "alias polis-cli='polis-cli -conf=/home/masternode/.poliscore/polis.conf -datadir=/home/masternode/.poliscore'" | tee -a ~/.bash_aliases
+echo "alias polis-cli='polis-cli -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore'" | tee -a ~/.bash_aliases
 
 echo && echo "Now run 'source ~/.bash_aliases' (without quotes) to use polis-cli"
-
-
-
 
 
 
