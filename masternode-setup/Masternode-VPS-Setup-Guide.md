@@ -120,7 +120,7 @@ sudo apt-get -y update
 sudo apt-get -y install \
     wget \
     git \
-    unzip \
+    zip \
     libevent-dev \
     libboost-dev \
     libboost-chrono-dev \
