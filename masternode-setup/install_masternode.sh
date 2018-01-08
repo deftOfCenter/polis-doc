@@ -19,9 +19,6 @@ echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo && echo && echo
 sleep 3
 
-# Check for systemd
-systemctl --version >/dev/null 2>&1 || { echo "systemd is required. Are you using Ubuntu 16.04?"  >&2; exit 1; }
-
 # Gather input from user
 read -e -p "Masternode Private Key (e.g. 31o6u1Ga4WxFog2b8QP9bQMrfbUtRj2tSk7sZVM9sryvQHamkyM) : " key
 if [[ "$key" == "" ]]; then
@@ -37,7 +34,7 @@ if [[ ("$add_swap" == "y" || "$add_swap" == "Y" || "$add_swap" == "") ]]; then
     if [[ "$swap_size" == "" ]]; then
         swap_size="2G"
     fi
-fi    
+fi
 read -e -p "Install Fail2ban? (Recommended) [Y/n] : " install_fail2ban
 read -e -p "Install UFW and configure ports? (Recommended) [Y/n] : " UFW
 
@@ -61,7 +58,7 @@ if [[ ("$add_swap" == "y" || "$add_swap" == "Y" || "$add_swap" == "") ]]; then
     fi
 fi
 
-# Update system 
+# Update system
 echo && echo "Upgrading system..."
 sleep 3
 sudo apt-get -y update
@@ -108,7 +105,7 @@ if [[ ("$install_fail2ban" == "y" || "$install_fail2ban" == "Y" || "$install_fai
     echo && echo "Installing fail2ban..."
     sleep 3
     sudo apt-get -y install fail2ban
-    sudo service fail2ban restart 
+    sudo service fail2ban restart
 fi
 
 # Install firewall if needed
@@ -129,6 +126,7 @@ fi
 # Download polis
 echo && echo "Downloading ..."
 sleep 3
+cd
 wget https://github.com/polispay/polis/releases/download/v$version/poliscore-$version-linux.zip
 unzip poliscore-$version-linux.zip
 rm poliscore-$version-linux.zip
@@ -136,22 +134,23 @@ rm poliscore-$version-linux.zip
 # Install polis
 echo && echo "Installing poliscore-$version..."
 sleep 3
-sudo mv /home/$user/poliscore-$version-linux/usr/local/bin/polis{d,-cli} /usr/local/bin
+cd
+sudo mv poliscore-$version-linux/usr/local/bin/polis{d,-cli} /usr/local/bin
 
 # Create config for poliscore
 echo && echo "Configuring poliscore-$version..."
 sleep 3
+cd
 rpcuser=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 rpcpassword=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
-sudo mkdir -p /home/$user/.poliscore
-sudo touch /home/$user/.poliscore/polis.conf
+mkdir -p .poliscore
+touch .poliscore/polis.conf
 echo '
 rpcuser='$rpcuser'
 rpcpassword='$rpcpassword'
 rpcallowip=127.0.0.1
 listen=1
 server=1
-daemon=0 # required for systemd
 logtimestamps=1
 maxconnections=256
 externalip='$ip'
@@ -168,58 +167,25 @@ connect=159.89.139.41:24126
 connect=174.138.70.155:24126
 connect=174.138.70.16:24126
 connect=45.55.247.25:24126
-' | sudo -E tee /home/$user/.poliscore/polis.conf
+' | tee /home/$user/.poliscore/polis.conf
 
 # Setup systemd service
 echo && echo "Starting polis deamon..."
 sleep 3
-sudo touch /etc/systemd/system/polisd.service
-echo '[Unit]
-Description=polisd
-After=network.target
-[Service]
-Type=simple
-User=$user
-WorkingDirectory=/home/$user
-ExecStart=/usr/local/bin/polisd -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore
-ExecStop=/usr/local/bin/polis-cli -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore stop
-Restart=on-abort
-
-
-[Install]
-WantedBy=multi-user.target
-' | sudo -E tee /etc/systemd/system/polisd.service
-sudo systemctl enable polisd
-sudo systemctl start polisd
+polis -daemon
 
 # Download and install sentinel
 echo && echo "Installing Sentinel..."
 sleep 3
+cd
 sudo apt-get -y install virtualenv python-pip
-sudo git clone https://github.com/polispay/sentinel /home/$user/sentinel
-cd /home/$user/sentinel
+sudo git clone https://github.com/polispay/sentinel
+cd sentinel
 virtualenv venv
 . venv/bin/activate
 pip install -r requirements.txt
 export EDITOR=nano
-(crontab -l -u $user 2>/dev/null; echo '* * * * * cd /home/$user/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1') | sudo crontab -u $user -
-
-cd ~
+(crontab -l -u $user 2>/dev/null; echo '* * * * * cd /home/'$user'/sentinel && ./venv/bin/python bin/sentinel.py >/dev/null 2>&1') | crontab -u $user -
 
 # Add alias to run polis-cli
 echo && echo "Masternode setup complete!"
-
-touch ~/.bash_aliases
-echo "alias polis-cli='polis-cli -conf=/home/$user/.poliscore/polis.conf -datadir=/home/$user/.poliscore'" | tee -a ~/.bash_aliases
-
-echo && echo "Now run 'source ~/.bash_aliases' (without quotes) to use polis-cli"
-
-
-
-
-
-
-
-
-
-

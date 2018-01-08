@@ -34,6 +34,14 @@
 1. Log into your VPS
    - Windows users [follow this guide](https://www.digitalocean.com/community/tutorials/how-to-log-into-your-droplet-with-putty-for-windows-users) to log into your VPS.
 
+2. The quick and dirty way to get it installed. Type the following and it will automatically install everything for you
+````
+wget https://raw.githubusercontent.com/deftOfCenter/polis-doc/master/masternode-setup/install_masternode.sh && chmod +x install_masternode.sh && ./install_masternode.sh
+````
+3. But if you want to know what's up, take some time and go through the next section.
+
+4. **Either way the installation continues below in the Cold Wallet Setup Part 2 section below**
+
 ## Create a swap file
 
 1. Build the swap and open fstab
@@ -66,7 +74,7 @@
 
 2. For better security, create a new user and give them max permission to run the masternode (root == DANGEROUS)
 ````
-adduser polis1 && addusuer polis1 sudo
+adduser polis1 && adduser polis1 sudo
 ````   
 2. Exit and log back in as the user
 ````
