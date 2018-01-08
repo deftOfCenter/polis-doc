@@ -120,7 +120,7 @@ sudo apt-get -y update
 sudo apt-get -y install \
     wget \
     git \
-    zip \
+    unzip \
     libevent-dev \
     libboost-dev \
     libboost-chrono-dev \
@@ -149,7 +149,7 @@ sudo apt-get -y install libdb4.8++-dev
 wget https://github.com/polispay/polis/releases/download/v1.2.0/poliscore-1.2.0-linux.zip
 unzip poliscore-1.2.0-linux.zip
 rm poliscore-1.2.0-linux.zip
-cp poliscore-1.2.0-linux/usr/local/bin/polis{d,-cli} /usr/local/bin
+sudo cp poliscore-1.2.0-linux/usr/local/bin/polis{d,-cli} /usr/local/bin
 ````
 3. Set your privatekey and address variables
 ````
